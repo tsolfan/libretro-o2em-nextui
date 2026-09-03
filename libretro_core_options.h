@@ -63,6 +63,30 @@ struct retro_core_option_definition option_defs_us[] = {
       "o2rom.bin"
    },
    {
+      "o2em_resolution_scaling",
+      "Internal Resolution Scaling (Restart)",
+      "Enabled support for higher resolution virtual keyboard and overlays.",
+      {
+         { "1", "Native" },
+         { "2",   "2x (480p)" },
+         { "3",   "3x (720p)" },
+         { "4",   "4x (960p)" },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
+      "o2em_vkbd_overlay",
+      "Keyboard Overlay (Restart)",
+      "Swaps the standard virtual on-screen keyboard with a game specific overlay.",
+      {
+         { "disabled", "None" },
+         { "us9429",   "Quest for the Rings" },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
       "o2em_region",
       "Console Region (Restart)",
       "Specify which region the system is from. 'Auto' chooses the correct region based on emulated hardware. 'NTSC' is 60hz, 'PAL' is 50hz. Games may run abnormally if the wrong region is selected, and the setting my be overridden if the current content is incompatible.",
@@ -78,6 +102,17 @@ struct retro_core_option_definition option_defs_us[] = {
       "o2em_swap_gamepads",
       "Swap Gamepads",
       "Swap inputs from the two connected controllers of the emulated console. Required for games such as UFO and P.T. Barnum's Acrobats, which accept player 1 input from the second controller.",
+      {
+         { "disabled", NULL },
+         { "enabled",  NULL },
+         { NULL, NULL },
+      },
+      "disabled"
+   },
+   {
+      "o2em_dual_gamepads",
+      "Dual Gamepads",
+      "Assigns the d-pad to player 1 input, face buttons to player 2 input, and the bumpers to each player's Action button for single-device multiplayer.",
       {
          { "disabled", NULL },
          { "enabled",  NULL },

@@ -59,6 +59,7 @@ char bios_file_name[16] = {0};
 
 uint16_t mbmp[TEX_WIDTH * TEX_HEIGHT];
 uint16_t *mbmp_prev = NULL;
+static uint16_t mbmp_highres[1600 * 1200]; 
 static bool crop_overscan = false;
 /* Note: 320x240 is not really correct,
  * since the actual overscan region varies
@@ -109,8 +110,12 @@ static int32_t low_pass_prev  = 0;
 
 int RLOOP=0;
 int joystick_data[2][5]={{0,0,0,0,0},{0,0,0,0,0}};
-static uint8_t p1_index = 0;
-static uint8_t p2_index = 1;
+
+static int resolution_scaling       = 1;
+static const char *keyboard_overlay = "disabled";
+static uint8_t p1_index             = 0;
+static uint8_t p2_index             = 1;
+static bool p1p2_combo              = false;
 
 int contax, o2flag, g74flag, c52flag, jopflag, helpflag;
 
@@ -481,34 +486,63 @@ static void update_input(void)
 
    if (!vkb_show)
    {
-      /* Joystick
-       * Player 1 */
-      joystick_data[p1_index][0]= (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) >> RETRO_DEVICE_ID_JOYPAD_UP;
-      joystick_data[p1_index][1]= (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) >> RETRO_DEVICE_ID_JOYPAD_DOWN;
-      joystick_data[p1_index][2]= (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) >> RETRO_DEVICE_ID_JOYPAD_LEFT;
-      joystick_data[p1_index][3]= (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) >> RETRO_DEVICE_ID_JOYPAD_RIGHT;
-      joystick_data[p1_index][4]= (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_B)) >> RETRO_DEVICE_ID_JOYPAD_B; /* "Action" button on the joystick */
-      /* Player 2 */
-      joystick_data[p2_index][0]= (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) >> RETRO_DEVICE_ID_JOYPAD_UP;
-      joystick_data[p2_index][1]= (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) >> RETRO_DEVICE_ID_JOYPAD_DOWN;
-      joystick_data[p2_index][2]= (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) >> RETRO_DEVICE_ID_JOYPAD_LEFT;
-      joystick_data[p2_index][3]= (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) >> RETRO_DEVICE_ID_JOYPAD_RIGHT;
-      joystick_data[p2_index][4]= (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_B)) >> RETRO_DEVICE_ID_JOYPAD_B; /* "Action" button on the joystick */
+      if (!p1p2_combo)
+      {
+         /* Standard Mapping */
+         /* Joystick
+         * Player 1 */
+         joystick_data[p1_index][0]= (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) >> RETRO_DEVICE_ID_JOYPAD_UP;
+         joystick_data[p1_index][1]= (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) >> RETRO_DEVICE_ID_JOYPAD_DOWN;
+         joystick_data[p1_index][2]= (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) >> RETRO_DEVICE_ID_JOYPAD_LEFT;
+         joystick_data[p1_index][3]= (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) >> RETRO_DEVICE_ID_JOYPAD_RIGHT;
+         joystick_data[p1_index][4]= (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_B)) >> RETRO_DEVICE_ID_JOYPAD_B; /* "Action" button on the joystick */
+         /* Player 2 */
+         joystick_data[p2_index][0]= (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) >> RETRO_DEVICE_ID_JOYPAD_UP;
+         joystick_data[p2_index][1]= (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) >> RETRO_DEVICE_ID_JOYPAD_DOWN;
+         joystick_data[p2_index][2]= (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) >> RETRO_DEVICE_ID_JOYPAD_LEFT;
+         joystick_data[p2_index][3]= (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) >> RETRO_DEVICE_ID_JOYPAD_RIGHT;
+         joystick_data[p2_index][4]= (joypad_bits[1] & (1 << RETRO_DEVICE_ID_JOYPAD_B)) >> RETRO_DEVICE_ID_JOYPAD_B; /* "Action" button on the joystick */
+      }
+      else
+      {
+         int16_t p2_analog_y = input_state_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_Y);
+         int16_t p2_analog_x = input_state_cb(0, RETRO_DEVICE_ANALOG, RETRO_DEVICE_INDEX_ANALOG_RIGHT, RETRO_DEVICE_ID_ANALOG_X);
+
+         bool p2_analog_up    = (p2_analog_y < -16384);
+         bool p2_analog_down  = (p2_analog_y >  16384);
+         bool p2_analog_left  = (p2_analog_x < -16384);
+         bool p2_analog_right = (p2_analog_x >  16384);
+
+         /* Player 1 (Port 0) */
+         joystick_data[p1_index][0] = (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_UP)) >> RETRO_DEVICE_ID_JOYPAD_UP;
+         joystick_data[p1_index][1] = (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)) >> RETRO_DEVICE_ID_JOYPAD_DOWN;
+         joystick_data[p1_index][2] = (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)) >> RETRO_DEVICE_ID_JOYPAD_LEFT;
+         joystick_data[p1_index][3] = (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)) >> RETRO_DEVICE_ID_JOYPAD_RIGHT;
+         joystick_data[p1_index][4] = (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_L)) >> RETRO_DEVICE_ID_JOYPAD_L; /* "Action" button on the joystick */
+
+         /* Player 2 (Mapped from Port 0 joypad_bits) */
+         joystick_data[p2_index][0] = ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_X)) >> RETRO_DEVICE_ID_JOYPAD_X) || p2_analog_up; /* Up = X */
+         joystick_data[p2_index][1] = ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_B)) >> RETRO_DEVICE_ID_JOYPAD_B) || p2_analog_down; /* Down = B */
+         joystick_data[p2_index][2] = ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_Y)) >> RETRO_DEVICE_ID_JOYPAD_Y) || p2_analog_left; /* Left = Y */
+         joystick_data[p2_index][3] = ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_A)) >> RETRO_DEVICE_ID_JOYPAD_A) || p2_analog_right; /* Right = A */
+         joystick_data[p2_index][4] = (joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_R)) >> RETRO_DEVICE_ID_JOYPAD_R; /* Action = R */
+      }
 
       /* Numeric and Alpha */
-      key[RETROK_0] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_0) |
-         ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_X)) >> RETRO_DEVICE_ID_JOYPAD_X);
-      key[RETROK_1] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_1) |
+      key[RETROK_RETURN] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN) |
+         ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_START)) >> RETRO_DEVICE_ID_JOYPAD_START);
+
+      key[RETROK_n] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_n) |
          ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_L)) >> RETRO_DEVICE_ID_JOYPAD_L);
-      key[RETROK_2] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_2) |
+      key[RETROK_y] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_y) |
          ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_R)) >> RETRO_DEVICE_ID_JOYPAD_R);
-      key[RETROK_3] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_3) |
+      key[RETROK_0] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_0) |
          ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_L2)) >> RETRO_DEVICE_ID_JOYPAD_L2);
-      key[RETROK_4] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_4) |
+      key[RETROK_1] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_1) |
          ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_R2)) >> RETRO_DEVICE_ID_JOYPAD_R2);
-      key[RETROK_5] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_5) |
+      key[RETROK_3] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_3) |
          ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_L3)) >> RETRO_DEVICE_ID_JOYPAD_L3);
-      key[RETROK_6] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_6) |
+      key[RETROK_4] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_4) |
          ((joypad_bits[0] & (1 << RETRO_DEVICE_ID_JOYPAD_R3)) >> RETRO_DEVICE_ID_JOYPAD_R3);
 
       key[RETROK_7] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_7);
@@ -527,7 +561,7 @@ static void update_input(void)
       key[RETROK_k] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_k);
       key[RETROK_l] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_l);
       key[RETROK_m] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_m);
-      key[RETROK_n] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_n);
+      //key[RETROK_n] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_n);
       key[RETROK_o] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_o);
       key[RETROK_p] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_p);
       key[RETROK_q] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_q);
@@ -538,13 +572,13 @@ static void update_input(void)
       key[RETROK_v] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_v);
       key[RETROK_w] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_w);
       key[RETROK_x] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_x);
-      key[RETROK_y] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_y);
+      //key[RETROK_y] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_y);
       key[RETROK_z] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_z);
       key[RETROK_SPACE]    = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_SPACE);       /* Space */
       key[RETROK_QUESTION] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_QUESTION); /* ? */
       key[RETROK_PERIOD]   = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_PERIOD);     /* . */
       key[RETROK_DELETE]   = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_END);           /* "Clear" */
-      key[RETROK_RETURN]   = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN);     /* "Enter" */
+      //key[RETROK_RETURN]   = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_RETURN);     /* "Enter" */
       key[RETROK_MINUS]    = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_MINUS);       /* - */
       key[RETROK_ASTERISK] = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_ASTERISK); /* Multiply sign */
       key[RETROK_SLASH]    = input_state_cb(0, RETRO_DEVICE_KEYBOARD, 0, RETROK_SLASH);       /* Divide sign */
@@ -881,19 +915,39 @@ void retro_get_system_av_info(struct retro_system_av_info *info)
    info->timing.fps               = fps;
    info->timing.sample_rate       = AUDIO_SAMPLERATE;
 
-   if (crop_overscan)
+   if (resolution_scaling == 1)
    {
-      info->geometry.base_width   = CROPPED_WIDTH;
-      info->geometry.base_height  = CROPPED_HEIGHT;
+      if (crop_overscan)
+      {
+         info->geometry.base_width   = CROPPED_WIDTH;
+         info->geometry.base_height  = CROPPED_HEIGHT;
+      }
+      else
+      {
+         info->geometry.base_width   = EMUWIDTH;
+         info->geometry.base_height  = EMUHEIGHT;
+      }
+
+      info->geometry.max_width       = EMUWIDTH;
+      info->geometry.max_height      = EMUHEIGHT;
    }
    else
    {
-      info->geometry.base_width   = EMUWIDTH;
-      info->geometry.base_height  = EMUHEIGHT;
-   }
+      if (crop_overscan)
+      {
+         info->geometry.base_width   = CROPPED_WIDTH * resolution_scaling;
+         info->geometry.base_height  = CROPPED_HEIGHT * resolution_scaling;
+      }
+      else
+      {
+         info->geometry.base_width   = EMUWIDTH * resolution_scaling;
+         info->geometry.base_height  = EMUHEIGHT * resolution_scaling;
+      }
 
-   info->geometry.max_width       = EMUWIDTH;
-   info->geometry.max_height      = EMUHEIGHT;
+      info->geometry.max_width       = EMUWIDTH * resolution_scaling;
+      info->geometry.max_height      = EMUHEIGHT * resolution_scaling;
+   }
+   
    info->geometry.aspect_ratio    = 4.0f / 3.0f;
 }
 
@@ -943,7 +997,7 @@ bool retro_load_game(const struct retro_game_info *info)
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_B,     "Action" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_Y,     "Move Virtual Keyboard" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_SELECT,"Show/Hide Virtual Keyboard" },
-      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_X,     "Numeric Key 0" },
+      { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_START,     "Numeric Key 0" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L,     "Numeric Key 1" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_R,     "Numeric Key 2" },
       { 0, RETRO_DEVICE_JOYPAD, 0, RETRO_DEVICE_ID_JOYPAD_L2,    "Numeric Key 3" },
@@ -1139,6 +1193,26 @@ static void check_variables(bool startup)
          }
       }
 
+      /* High Resolution Keyboard */
+      var.key    = "o2em_resolution_scaling";
+      var.value  = NULL;
+      resolution_scaling = 1;
+
+      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      {
+         resolution_scaling = atoi(var.value);
+      }
+
+      /* Keyboard Overlay */
+      var.key    = "o2em_vkbd_overlay";
+      var.value  = NULL;
+      keyboard_overlay = "default";
+
+      if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+      {
+         keyboard_overlay = var.value;
+      }
+
       /* Emulated Hardware */
       var.key   = "o2em_bios";
       var.value = NULL;
@@ -1181,6 +1255,19 @@ static void check_variables(bool startup)
       {
          p1_index = 1;
          p2_index = 0;
+      }
+   }
+
+   /* Dual Gamepads */
+   var.key    = "o2em_dual_gamepads";
+   var.value  = NULL;
+   p1p2_combo = false;
+
+   if (environ_cb(RETRO_ENVIRONMENT_GET_VARIABLE, &var) && var.value)
+   {
+      if (!strcmp(var.value, "enabled"))
+      {
+         p1p2_combo = true;
       }
    }
 
@@ -1312,8 +1399,18 @@ void retro_init(void)
    if (environ_cb(RETRO_ENVIRONMENT_GET_INPUT_BITMASKS, NULL))
       libretro_supports_bitmasks = true;
 
-   vkb_configure_virtual_keyboard(mbmp, EMUWIDTH, EMUHEIGHT, TEX_WIDTH);
    check_variables(true);
+
+   vkb_set_virtual_keyboard_resolution(resolution_scaling, keyboard_overlay);
+
+   if (resolution_scaling == 1)
+   {
+      vkb_configure_virtual_keyboard(mbmp, EMUWIDTH, EMUHEIGHT, TEX_WIDTH);
+   }
+   else
+   {
+      vkb_configure_virtual_keyboard(mbmp_highres, EMUWIDTH * resolution_scaling, EMUHEIGHT * resolution_scaling, TEX_WIDTH * resolution_scaling);
+   }
 }
 
 void retro_deinit(void)
@@ -1363,16 +1460,72 @@ void retro_run(void)
    if (blend_frames)
       blend_frames();
 
-   if (vkb_show)
-     vkb_show_virtual_keyboard();
-
-   if (crop_overscan)
+   if (resolution_scaling == 1)
    {
-		uint16_t *mbmp_cropped = mbmp + (TEX_WIDTH * CROPPED_OFFSET_Y) + CROPPED_OFFSET_X;
-		video_cb(mbmp_cropped, CROPPED_WIDTH, CROPPED_HEIGHT, TEX_WIDTH << 1);
+      if (vkb_show)
+      vkb_show_virtual_keyboard();
+
+      if (crop_overscan)
+      {
+         uint16_t *mbmp_cropped = mbmp + (TEX_WIDTH * CROPPED_OFFSET_Y) + CROPPED_OFFSET_X;
+         video_cb(mbmp_cropped, CROPPED_WIDTH, CROPPED_HEIGHT, TEX_WIDTH << 1);
+      }
+      else
+         video_cb(mbmp, EMUWIDTH, EMUHEIGHT, TEX_WIDTH << 1);
    }
    else
-      video_cb(mbmp, EMUWIDTH, EMUHEIGHT, TEX_WIDTH << 1);
+   {
+      int mbmp_width_final, mbmp_height_final;
+      uint16_t *mbmp_temp;
+
+      if (crop_overscan)
+      {
+         mbmp_temp = mbmp + (TEX_WIDTH * CROPPED_OFFSET_Y) + CROPPED_OFFSET_X;
+         mbmp_width_final = CROPPED_WIDTH;
+         mbmp_height_final = CROPPED_HEIGHT;
+      }
+      else
+      {
+         mbmp_temp = mbmp;
+         mbmp_width_final = EMUWIDTH;
+         mbmp_height_final = EMUHEIGHT;
+      }
+
+      int mbmp_pitch_final = TEX_WIDTH * resolution_scaling;
+
+      for (int y = 0; y < mbmp_height_final; y++)
+      {
+         uint16_t *src_row = mbmp_temp + (y * TEX_WIDTH);
+         
+         // Calculate the pointer to the very first row of this scaled block
+         uint16_t *dst_row_first = mbmp_highres + ((y * resolution_scaling) * mbmp_pitch_final);
+
+         // Manually scale pixels horizontally across the first row
+         for (int x = 0; x < mbmp_width_final; x++)
+         {
+            uint16_t p = src_row[x];
+            int base_x = x * resolution_scaling;
+            
+            for (int i = 0; i < resolution_scaling; i++)
+            {
+               dst_row_first[base_x + i] = p;
+            }
+         }
+
+         // Use memcpy to duplicate the completed row for the remaining vertical height
+         for (int r = 1; r < resolution_scaling; r++)
+         {
+            // Jump forward in memory by r rows to find the next destination line
+            uint16_t *dst_row_next = dst_row_first + (r * mbmp_pitch_final);
+            memcpy(dst_row_next, dst_row_first, mbmp_pitch_final * sizeof(uint16_t));
+         }
+      }
+
+      if (vkb_show)
+      vkb_show_virtual_keyboard();
+
+      video_cb(mbmp_highres, mbmp_width_final * resolution_scaling, mbmp_height_final * resolution_scaling, mbmp_pitch_final << 1);
+   }
 
    upate_audio();
 }
