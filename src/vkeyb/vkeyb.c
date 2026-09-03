@@ -1,5 +1,7 @@
 /* Virtual keyboard */
 
+#include <string.h>
+
 #include "vkeyb.h"
 #include "vkeyb_config.h"
 #include "vkeyb_layout.h"
@@ -11,6 +13,7 @@ static const uint16_t *current_kb_image_data = ODYSSEY2_KEYBOARD_IMG_DATA;
 static int current_kb_width = ODYSSEY2_KEYBOARD_IMG_WIDTH;
 static int current_kb_height = ODYSSEY2_KEYBOARD_IMG_HEIGHT;
 static const struct VKey *current_key = 0;
+static const struct VKey *current_default_key = 0;
 static enum VkbPosition vkb_position = VKB_POS_DOWN;
 static const struct VKey *current_keyboard_layout = o2_kb;
 static int current_keyboard_keys = ODYSSEY2_KB_KEYS;
@@ -24,13 +27,97 @@ static uint16_t color_select = 0xFFC0;
 
 static int box_thickness = 2;
 
+void vkb_set_virtual_keyboard_resolution(int resolution_scaling, const char *keyboard_overlay)
+{
+   if (resolution_scaling == 1)
+   {
+      current_kb_width = ODYSSEY2_KEYBOARD_IMG_WIDTH;
+      current_kb_height = ODYSSEY2_KEYBOARD_IMG_HEIGHT;
+
+      if (strcmp(keyboard_overlay, "us9429") == 0)
+      {
+        current_kb_image_data = ODYSSEY2_KEYBOARD_QFTR_IMG_DATA; 
+        current_keyboard_layout = o2_kb_qftr;
+        current_default_key = ODYSSEY2_DEFAULT_KEY_QFTR;
+        current_key = ODYSSEY2_DEFAULT_KEY_QFTR;
+      }
+      else
+      {
+        current_kb_image_data = ODYSSEY2_KEYBOARD_IMG_DATA; 
+        current_keyboard_layout = o2_kb;
+        current_default_key = ODYSSEY2_DEFAULT_KEY;
+        current_key = ODYSSEY2_DEFAULT_KEY;
+      }
+   }
+   else if (resolution_scaling == 2)
+   {
+      current_kb_width = ODYSSEY2_KEYBOARD_2X_IMG_WIDTH;
+      current_kb_height = ODYSSEY2_KEYBOARD_2X_IMG_HEIGHT;
+
+      if (strcmp(keyboard_overlay, "us9429") == 0)
+      {
+        current_kb_image_data = ODYSSEY2_KEYBOARD_QFTR_2X_IMG_DATA; 
+        current_keyboard_layout = o2_kb_qftr_2x;
+        current_default_key = ODYSSEY2_DEFAULT_KEY_QFTR_2X;
+        current_key = ODYSSEY2_DEFAULT_KEY_QFTR_2X;
+      }
+      else
+      {
+        current_kb_image_data = ODYSSEY2_KEYBOARD_2X_IMG_DATA; 
+        current_keyboard_layout = o2_kb_2x;
+        current_default_key = ODYSSEY2_DEFAULT_KEY_2X;
+        current_key = ODYSSEY2_DEFAULT_KEY_2X;
+      }
+   }
+   else if (resolution_scaling == 3)
+   {
+      current_kb_width = ODYSSEY2_KEYBOARD_3X_IMG_WIDTH;
+      current_kb_height = ODYSSEY2_KEYBOARD_3X_IMG_HEIGHT;
+
+      if (strcmp(keyboard_overlay, "us9429") == 0)
+      {
+        current_kb_image_data = ODYSSEY2_KEYBOARD_QFTR_3X_IMG_DATA; 
+        current_keyboard_layout = o2_kb_qftr_3x;
+        current_default_key = ODYSSEY2_DEFAULT_KEY_QFTR_3X;
+        current_key = ODYSSEY2_DEFAULT_KEY_QFTR_3X;
+      }
+      else
+      {
+        current_kb_image_data = ODYSSEY2_KEYBOARD_3X_IMG_DATA; 
+        current_keyboard_layout = o2_kb_3x;
+        current_default_key = ODYSSEY2_DEFAULT_KEY_3X;
+        current_key = ODYSSEY2_DEFAULT_KEY_3X;
+      }
+   }
+   else if (resolution_scaling == 4)
+   {
+      current_kb_width = ODYSSEY2_KEYBOARD_4X_IMG_WIDTH;
+      current_kb_height = ODYSSEY2_KEYBOARD_4X_IMG_HEIGHT;
+
+      if (strcmp(keyboard_overlay, "us9429") == 0)
+      {
+        current_kb_image_data = ODYSSEY2_KEYBOARD_QFTR_4X_IMG_DATA; 
+        current_keyboard_layout = o2_kb_qftr_4x;
+        current_default_key = ODYSSEY2_DEFAULT_KEY_QFTR_4X;
+        current_key = ODYSSEY2_DEFAULT_KEY_QFTR_4X;
+      }
+      else
+      {
+        current_kb_image_data = ODYSSEY2_KEYBOARD_4X_IMG_DATA; 
+        current_keyboard_layout = o2_kb_4x;
+        current_default_key = ODYSSEY2_DEFAULT_KEY_4X;
+        current_key = ODYSSEY2_DEFAULT_KEY_4X;
+      }
+   }
+}
+
 void vkb_configure_virtual_keyboard(uint16_t *video_buffer, int width, int height, int pitch)
 {
   vkb_video_buffer  = video_buffer;
   vkb_screen_width  = width;
   vkb_screen_height = height;
   vkb_screen_pitch  = pitch;
-  current_key       = ODYSSEY2_DEFAULT_KEY;
+  current_key       = current_default_key;
 }
 
 /* Set the virtual keyboard transparency */

@@ -22,9 +22,23 @@ struct VKey
 
 // Keyboard layout
 extern const struct VKey o2_kb[];
+extern const struct VKey o2_kb_2x[];
+extern const struct VKey o2_kb_3x[];
+extern const struct VKey o2_kb_4x[];
+extern const struct VKey o2_kb_qftr[];
+extern const struct VKey o2_kb_qftr_2x[];
+extern const struct VKey o2_kb_qftr_3x[];
+extern const struct VKey o2_kb_qftr_4x[];
 
 // Default key
 extern const struct VKey *ODYSSEY2_DEFAULT_KEY;
+extern const struct VKey *ODYSSEY2_DEFAULT_KEY_2X;
+extern const struct VKey *ODYSSEY2_DEFAULT_KEY_3X;
+extern const struct VKey *ODYSSEY2_DEFAULT_KEY_4X;
+extern const struct VKey *ODYSSEY2_DEFAULT_KEY_QFTR;
+extern const struct VKey *ODYSSEY2_DEFAULT_KEY_QFTR_2X;
+extern const struct VKey *ODYSSEY2_DEFAULT_KEY_QFTR_3X;
+extern const struct VKey *ODYSSEY2_DEFAULT_KEY_QFTR_4X;
 
 #endif /* __VKEYB_LAYOUT_H */
 

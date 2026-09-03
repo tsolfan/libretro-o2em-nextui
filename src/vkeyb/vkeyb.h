@@ -20,6 +20,8 @@ enum VkbAlpha
 	VKB_ALPHA_100
 };
 
+// Set the virtual keyboard resolution
+extern void vkb_set_virtual_keyboard_resolution(int resolution_scaling, const char *keyboard_overlay);
 // Configure the virtual keyboard feature
 extern void vkb_configure_virtual_keyboard(uint16_t *video_buffer, int width, int height, int pitch);
 // Set the virtual keyboard transparency
