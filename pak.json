@@ -1,5 +1,5 @@
 {
-  "name": "Odyssey 2/VideoPac",
+  "name": "O2",
   "version": "v1.0.0",
   "type": "EMU",
   "description": "An Odyssey 2/VideoPac emulator for minarch using the O2EM core.",
