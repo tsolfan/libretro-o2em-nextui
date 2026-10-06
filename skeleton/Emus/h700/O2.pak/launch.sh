@@ -1,6 +1,6 @@
 #!/bin/sh
 
-EMU_EXE=neocd
+EMU_EXE=o2em
 CORES_PATH=$(dirname "$0")
 
 ###############################

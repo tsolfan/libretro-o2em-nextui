@@ -1,6 +1,6 @@
 #!/bin/sh
 
-EMU_EXE=dice
+EMU_EXE=o2em
 CORES_PATH=$(dirname "$0")
 
 ###############################
