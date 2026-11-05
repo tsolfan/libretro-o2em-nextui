@@ -5,7 +5,7 @@
   "description": "An Odyssey 2/VideoPac emulator for minarch using the O2EM core.",
   "author": "TSOLfan",
   "repo_url": "https://github.com/tsolfan/libretro-o2em-nextui/",
-  "release_filename": "O2.pak.zip",
+  "release_filename": "O2.pakz",
   "changelog": {
     "v1.0.0": "Initial Release."
   },
